@@ -10,7 +10,7 @@ async function trainNetwork() {
     document.getElementById("loading").style.display = "block";
 
     // GitHub 上的 star.json 文件 URL
-    let dataURL = "https://github.com/Ednana17/interactive-relu-nn-test/blob/main/star.json";
+    let dataURL = "https://raw.githubusercontent.com/Ednana17/interactive-relu-nn-test/main/star.json";
 
     let response = await fetch(dataURL);
     let jsonData = await response.json();
