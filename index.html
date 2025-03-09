@@ -32,6 +32,12 @@
             let nodes = document.getElementById("nodes-per-layer").value;
             let trainSplit = document.getElementById("train-split").value;
 
+            // GitHub 上的 star.json 文件 URL
+            let dataURL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/star.json";
+
+            let response = await fetch(dataURL);
+            let jsonData = await response.json();
+
             let pythonScript = `
 import numpy as np
 import pandas as pd
@@ -40,12 +46,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
 import json
 
-# Mock dataset (should replace with real data)
-data = pd.DataFrame({
-    'B-V': np.random.rand(500) * 2 - 1,  # Simulated feature 1
-    'Amag': np.random.rand(500) * 5 + 10,  # Simulated feature 2
-    'TargetClass': np.random.randint(0, 2, 500)  # Binary class
-})
+data = pd.DataFrame(${JSON.stringify(jsonData)})
 
 X = data[['B-V', 'Amag']].values
 y = data['TargetClass'].values
@@ -80,3 +81,4 @@ json.dumps(output_data)
     </script>
 </body>
 </html>
+
