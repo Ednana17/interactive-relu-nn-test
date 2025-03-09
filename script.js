@@ -9,6 +9,12 @@ let pyodideReady = loadPyodideAndTrain();
 async function trainNetwork() {
     let pyodide = await pyodideReady;
 
+    // 获取用户输入参数
+    let numLayers = parseInt(document.getElementById("num-layers").value);
+    let nodesPerLayer = parseInt(document.getElementById("nodes-per-layer").value);
+    let trainSplit = parseFloat(document.getElementById("train-split").value) / 100;
+    let maxIter = parseInt(document.getElementById("max-iter").value);
+
     // 显示加载动画
     document.getElementById("loading").style.display = "block";
     document.getElementById("plot-container").innerHTML = "";
@@ -21,12 +27,6 @@ async function trainNetwork() {
 
         let jsonData = await response.json();
 
-        // 获取用户输入
-        let numLayers = parseInt(document.getElementById("num-layers").value);
-        let nodesPerLayer = parseInt(document.getElementById("nodes-per-layer").value);
-        let trainSplit = parseInt(document.getElementById("train-split").value) / 100;
-        let maxIter = parseInt(document.getElementById("max-iter").value);
-
         // 生成 Python 代码
         let pythonScript = `
 import numpy as np
@@ -34,20 +34,21 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
+import json
 
 # 加载 JSON 数据
 data = pd.DataFrame(${JSON.stringify(jsonData)})
 
 # 选择输入特征和目标变量
-X = data[['B-V', 'Amag']].values  # 选择两个数值特征
-y = data['TargetClass'].values    # 目标变量 (二分类)
+X = data[['B-V', 'Amag']].values
+y = data['TargetClass'].values
 
 # 数据标准化
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# 训练/测试拆分
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=1 - ${trainSplit}, random_state=42, stratify=y)
+# 训练/测试划分
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=(1 - ${trainSplit}), random_state=42, stratify=y)
 
 # 训练 MLP 神经网络
 mlp = MLPClassifier(hidden_layer_sizes=(${Array(numLayers).fill(nodesPerLayer).join(",")}), 
@@ -56,31 +57,31 @@ mlp.fit(X_train, y_train)
 
 # 计算每层的输出
 layer_outputs = []
-layer_input = X_scaled
-for i in range(${numLayers}):
+layer_input = X_train
+for i in range(len(mlp.coefs_) - 1):  # 不包括最终输出层
     layer_output = np.maximum(0, layer_input @ mlp.coefs_[i] + mlp.intercepts_[i])
-    layer_outputs.append(layer_output.tolist())  # 转换为 JSON 可读格式
+    layer_outputs.append(layer_output.tolist())  # 转换为 JSON 格式
     layer_input = layer_output
 
 # 返回 JSON 数据
-{"layers": layer_outputs, "target": y.tolist()}
+json.dumps({"layers": layer_outputs, "target": y_train.tolist()})
         `;
 
         // 运行 Python 代码
         let resultJson = await pyodide.runPythonAsync(pythonScript);
         let result = JSON.parse(resultJson);
 
+        let targetClasses = result.target;
+
         // 隐藏加载动画
         document.getElementById("loading").style.display = "none";
-
-        let targetClasses = result.target;
 
         // 渲染每一层的 3D 图像
         result.layers.forEach((layerData, index) => {
             let dfLayer = layerData.map((nodeValues, i) => ({
-                x: nodeValues[0], 
-                y: nodeValues[1], 
-                z: nodeValues[2], 
+                x: nodeValues[0] || 0,  // 处理 NaN 或 undefined
+                y: nodeValues[1] || 0,
+                z: nodeValues[2] || 0,
                 target: targetClasses[i]  // 目标分类
             }));
 
@@ -111,7 +112,9 @@ for i in range(${numLayers}):
 
     } catch (error) {
         console.error("Error loading or processing data:", error);
+        alert("Failed to load data or process model. Please check JSON file.");
         document.getElementById("loading").style.display = "none";
     }
 }
+
 
