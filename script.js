@@ -116,5 +116,3 @@ json.dumps({"layers": layer_outputs, "target": y_train.tolist()})
         document.getElementById("loading").style.display = "none";
     }
 }
-
-
