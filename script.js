@@ -1,6 +1,6 @@
 async function loadPyodideAndTrain() {
     let pyodide = await loadPyodide();
-    await pyodide.loadPackage(["numpy", "pandas", "scikit-learn", "plotly"]);
+    await pyodide.loadPackage(["numpy", "pandas", "scikit-learn"]);
     return pyodide;
 }
 
@@ -31,7 +31,6 @@ async function trainNetwork() {
         let pythonScript = `
 import numpy as np
 import pandas as pd
-import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPClassifier
@@ -60,38 +59,54 @@ layer_outputs = []
 layer_input = X_scaled
 for i in range(${numLayers}):
     layer_output = np.maximum(0, layer_input @ mlp.coefs_[i] + mlp.intercepts_[i])
-    layer_outputs.append(layer_output)
+    layer_outputs.append(layer_output.tolist())  # 转换为 JSON 可读格式
     layer_input = layer_output
 
-# 生成可视化数据
-plots = []
-for i, layer in enumerate(layer_outputs):
-    df_layer = pd.DataFrame(layer, columns=[f"Node {j+1}" for j in range(${nodesPerLayer})])
-    df_layer["TargetClass"] = y
-    
-    fig = px.scatter_3d(df_layer, x="Node 1", y="Node 2", z="Node 3", 
-                        color=df_layer["TargetClass"].astype(str),
-                        title=f"3D Visualization of Layer {i+1}",
-                        labels={"TargetClass": "Class"})
-    
-    plots.append(fig.to_json())
-
-plots
+# 返回 JSON 数据
+{"layers": layer_outputs, "target": y.tolist()}
         `;
 
         // 运行 Python 代码
-        let plotsJson = await pyodide.runPythonAsync(pythonScript);
+        let resultJson = await pyodide.runPythonAsync(pythonScript);
+        let result = JSON.parse(resultJson);
 
         // 隐藏加载动画
         document.getElementById("loading").style.display = "none";
 
-        // 渲染每一层的3D图像
-        let plots = JSON.parse(plotsJson);
-        plots.forEach((plot, index) => {
+        let targetClasses = result.target;
+
+        // 渲染每一层的 3D 图像
+        result.layers.forEach((layerData, index) => {
+            let dfLayer = layerData.map((nodeValues, i) => ({
+                x: nodeValues[0], 
+                y: nodeValues[1], 
+                z: nodeValues[2], 
+                target: targetClasses[i]  // 目标分类
+            }));
+
+            let trace = {
+                x: dfLayer.map(d => d.x),
+                y: dfLayer.map(d => d.y),
+                z: dfLayer.map(d => d.z),
+                mode: 'markers',
+                marker: {
+                    size: 5,
+                    color: dfLayer.map(d => d.target),  // 根据类别着色
+                    colorscale: 'Viridis'
+                },
+                type: 'scatter3d'
+            };
+
+            let layout = {
+                title: `3D Visualization of Layer ${index + 1}`,
+                scene: { xaxis: { title: 'Node 1' }, yaxis: { title: 'Node 2' }, zaxis: { title: 'Node 3' } }
+            };
+
             let div = document.createElement("div");
             div.innerHTML = `<h3>Hidden Layer ${index + 1}</h3><div id="plot-${index}"></div>`;
             document.getElementById("plot-container").appendChild(div);
-            Plotly.newPlot(`plot-${index}`, JSON.parse(plot).data, JSON.parse(plot).layout);
+
+            Plotly.newPlot(`plot-${index}`, [trace], layout);
         });
 
     } catch (error) {
