@@ -3,21 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive NN_relu</title>
+    <title>Interactive NN ReLU Visualization</title>
+
+    <!-- 引入 Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- 引入 Pyodide -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.21.0/full/pyodide.js"></script>
+
+    <!-- CSS 样式 -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Interactive NN_relu</h1>
+    <h1>Interactive Neural Network with ReLU Activation</h1>
 
-    <div>
+    <!-- 参数选择 -->
+    <div class="controls">
         <label>Hidden Layers:</label>
-        <input type="number" id="num-layers" value="2" min="2" max="5">
+        <input type="number" id="num-layers" value="2" min="1" max="5">
+        
         <label>Nodes per Layer:</label>
-        <input type="number" id="nodes-per-layer" value="3" min="1" max="3">
-        <label>Train/Test Split:</label>
-        <input type="number" id="train-split" value="70" min="10" max="90">%
+        <input type="number" id="nodes-per-layer" value="3" min="1" max="10">
+        
+        <label>Train/Test Split (%):</label>
+        <input type="number" id="train-split" value="70" min="10" max="90">
+        
         <label>Max Iterations:</label>
         <select id="max-iter">
             <option value="500">500</option>
@@ -25,9 +35,11 @@
             <option value="1500">1500</option>
             <option value="2000">2000</option>
         </select>
+
         <button onclick="trainNetwork()">Train Model</button>
     </div>
 
+    <!-- 加载动画 -->
     <div id="loading" style="display: none;">
         <h2>Processing... Please wait.</h2>
         <img src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Loading_icon.gif" width="100">
@@ -36,6 +48,7 @@
     <h2>3D Visualizations for Each Layer</h2>
     <div id="plot-container"></div>
 
+    <!-- JavaScript 代码 -->
     <script src="script.js"></script>
 </body>
 </html>
