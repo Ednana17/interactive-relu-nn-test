@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Neural Network (Pyodide)</title>
+    <title>Interactive NN_relu</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.21.0/full/pyodide.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1>Interactive Neural Network (Pyodide)</h1>
@@ -14,71 +15,27 @@
         <label>Hidden Layers:</label>
         <input type="number" id="num-layers" value="2" min="1" max="5">
         <label>Nodes per Layer:</label>
-        <input type="number" id="nodes-per-layer" value="3" min="1" max="10">
+        <input type="number" id="nodes-per-layer" value="3" min="1" max="3">
         <label>Train/Test Split:</label>
         <input type="number" id="train-split" value="70" min="10" max="90">%
+        <label>Max Iterations:</label>
+        <select id="max-iter">
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+            <option value="1500">1500</option>
+            <option value="2000">2000</option>
+        </select>
         <button onclick="trainNetwork()">Train Model</button>
     </div>
 
-    <h2>3D Visualization</h2>
+    <div id="loading" style="display: none;">
+        <h2>Processing... Please wait.</h2>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Loading_icon.gif" width="100">
+    </div>
+
+    <h2>3D Visualizations for Each Layer</h2>
     <div id="plot-container"></div>
 
-    <script>
-        async function trainNetwork() {
-            let pyodide = await loadPyodide();
-            await pyodide.loadPackage(["numpy", "pandas", "scikit-learn"]);
-
-            let layers = document.getElementById("num-layers").value;
-            let nodes = document.getElementById("nodes-per-layer").value;
-            let trainSplit = document.getElementById("train-split").value;
-
-            // GitHub 上的 star.json 文件 URL
-            let dataURL = "https://raw.githubusercontent.com/Ednana17/interactive-relu-nn-test/main/star.json";
-
-            let response = await fetch(dataURL);
-            let jsonData = await response.json();
-
-            let pythonScript = `
-import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.neural_network import MLPClassifier
-import json
-
-data = pd.DataFrame(${JSON.stringify(jsonData)})
-
-X = data[['B-V', 'Amag']].values
-y = data['TargetClass'].values
-
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
-
-train_size = int(len(X) * ${trainSplit} / 100)
-X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, random_state=42, stratify=y)
-
-mlp_relu = MLPClassifier(hidden_layer_sizes=(${nodes},) * ${layers}, activation='relu', max_iter=500, random_state=42)
-mlp_relu.fit(X_train, y_train)
-
-hidden_layer_output = np.maximum(0, X_train @ mlp_relu.coefs_[0] + mlp_relu.intercepts_[0])
-output_data = [{"x": X_train[i][0], "y": X_train[i][1], "z": hidden_layer_output[i][0]} for i in range(len(X_train))]
-json.dumps(output_data)
-`;
-
-            let result = await pyodide.runPythonAsync(pythonScript);
-            let outputData = JSON.parse(result);
-            
-            let trace = {
-                x: outputData.map(d => d.x),
-                y: outputData.map(d => d.y),
-                z: outputData.map(d => d.z),
-                mode: "markers",
-                type: "scatter3d",
-                marker: { size: 5, color: outputData.map(d => d.z), colorscale: "Viridis" }
-            };
-            Plotly.newPlot("plot-container", [trace]);
-        }
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
-
